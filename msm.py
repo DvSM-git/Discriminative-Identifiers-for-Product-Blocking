@@ -8,8 +8,8 @@ from similarities import *
 
 # Wrapper for caching external function calls
 @lru_cache(maxsize=10000)
-def cached_q_gram(s1, s2, q=3):
-    return q_gram_similarity(string_1=s1, string_2=s2, q=q)
+def cached_k_gram(s1, s2, k=3):
+    return calculate_jaccard_kgram(text_a=s1, text_b=s2, k=k)
 
 class MSMClassifier:
     """
@@ -163,12 +163,12 @@ class MSMClassifier:
             # Greedy matching against remaining keys in p2
             for key_2 in unmatched_keys_2:
                 # Use cached similarity
-                key_sim = cached_q_gram(key_1, key_2, q=3)
+                key_sim = cached_k_gram(key_1, key_2, k=3)
                 
                 if key_sim > self.gamma:
                     val_1 = str(features_1[key_1])
                     val_2 = str(features_2[key_2])
-                    value_sim = cached_q_gram(val_1, val_2, q=3)
+                    value_sim = cached_k_gram(val_1, val_2, k=3)
                     
                     sim += key_sim * value_sim
                     w += key_sim
@@ -230,7 +230,7 @@ class MSMClassifier:
         """
         Computes similarity between titles
         """
-        name_cosine_sim = cosineSim(t1, t2)
+        name_cosine_sim = calculate_cosine_similarity(t1, t2)
         if name_cosine_sim > self.alpha:
             return 1
 
@@ -241,32 +241,32 @@ class MSMClassifier:
         similar_mw = False
         
         for w1 in mw1:
-            nn1, num1 = split_numeric(w1)
+            nn1, num1 = parse_alpha_numeric(w1)
             for w2 in mw2:
-                nn2, num2 = split_numeric(w2)
+                nn2, num2 = parse_alpha_numeric(w2)
                 
                 if num1 != num2:
                     continue 
 
-                threshold_sim = norm_lv(nn1, nn2)
+                threshold_sim = get_normalised_distance(nn1, nn2)
                 if threshold_sim > self.threshold:
                     similar_mw = True
                     pass 
 
         for w1 in mw1:
-            nn1, num1 = split_numeric(w1)
+            nn1, num1 = parse_alpha_numeric(w1)
             for w2 in mw2:
-                nn2, num2 = split_numeric(w2)
-                threshold_sim = norm_lv(nn1, nn2)
+                nn2, num2 = parse_alpha_numeric(w2)
+                threshold_sim = get_normalised_distance(nn1, nn2)
                 if threshold_sim > self.threshold:
                     if num1 != num2: 
                         return -1
                     else: 
                         similar_mw = True
 
-        final_sim = self.beta * name_cosine_sim + (1 - self.beta) * avg_lv_sim(mw1, mw2, mw=False)
+        final_sim = self.beta * name_cosine_sim + (1 - self.beta) * weighted_model_similarity(mw1, mw2, enforce_strict=False)
         
         if similar_mw:
-            final_sim = self.delta * avg_lv_sim(mw1, mw2, mw=True) + (1 - self.delta) * final_sim
+            final_sim = self.delta * weighted_model_similarity(mw1, mw2, enforce_strict=True) + (1 - self.delta) * final_sim
             
         return final_sim

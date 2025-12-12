@@ -1,5 +1,4 @@
 import os
-import networkx as nx 
 import itertools
 import matplotlib.pyplot as plt
 os.environ["OMP_NUM_THREADS"] = "1"

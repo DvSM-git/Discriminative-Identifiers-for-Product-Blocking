@@ -1,67 +1,87 @@
-import Levenshtein
 import math
+import Levenshtein
+from typing import List, Tuple, Set
 
-def q_gram_similarity(string_1, string_2, q):
+
+def calculate_cosine_similarity(text_a: str, text_b: str) -> float:
     """
-    Similarity of two q-grams (shingles)
+    Computes cosine similarity based on whitespace-separated tokens
     """
-    q_grams_1 = {string_1[i:i+q] for i in range(len(string_1) - q + 1)}
-    q_grams_2 = {string_2[i:i+q] for i in range(len(string_2) - q + 1)}
+    tokens_a: Set[str] = set(text_a.split())
+    tokens_b: Set[str] = set(text_b.split())
 
-    intersect = q_grams_1.intersection(q_grams_2)
-    union = q_grams_1.union(q_grams_2)
-
-    return len(intersect) / len(union) if len(union) != 0 else 0
-
-def cosineSim(string_1, string_2):
-    """
-    Cosine similarity between two strings
-    """
-    string_1_set = set(string_1.split())
-    string_2_set = set(string_2.split())
-
-    numerator = len(string_1_set.intersection(string_2_set))
-
-    size_1 = len(string_1_set)
-    size_2 = len(string_2_set)
-
-    return numerator/(math.sqrt(size_1) * math.sqrt(size_2)) if size_1 != 0 and size_2 != 0 else 0
-
-
-def norm_lv(string_1, string_2):
-    """
-    Levenshtein distance between two strings
-    """
-    lv_dist = Levenshtein.distance(string_1, string_2)
-    max_len = max(len(string_1), len(string_2))
-
-    return 0 if max_len == 0 else lv_dist/max_len
-
-
-def avg_lv_sim(model_words_1, model_words_2, mw: bool):
-    """
-    Average Leneshtein distance between model word sets
-    """
-    numerator = 0
-    denominator = 0
-
-    for word_1 in model_words_1:
-        non_numeric_1, numeric_1 = split_numeric(word_1)
-
-        for word_2 in model_words_2:
-            non_numeric_2, numeric_2 = split_numeric(word_2)
-
-            if not mw or (mw and norm_lv(non_numeric_1, non_numeric_2) > 0.5 and numeric_1 == numeric_2):
-                numerator += (1 - norm_lv(word_1,word_2)) * (len(word_1) + len(word_2))
-                denominator += (len(word_1) + len(word_2))
+    mag_a = math.sqrt(len(tokens_a))
+    mag_b = math.sqrt(len(tokens_b))
     
-    return numerator / denominator if denominator != 0 else 0
+    if mag_a == 0 or mag_b == 0:
+        return 0.0
 
-def split_numeric(string):
-    """
-    Splits strings into substrings
-    """
-    non_numeric = ''.join(filter(lambda char: not char.isdigit(), string))
-    numeric = ''.join(filter(lambda char: char.isdigit(), string))
+    common_tokens = len(tokens_a & tokens_b)
     
-    return non_numeric, numeric
+    return common_tokens / (mag_a * mag_b)
+
+def calculate_jaccard_kgram(text_a: str, text_b: str, k: int) -> float:
+    """
+    Calculates the Jaccard similarity index based on k-length shingles
+    """
+    shingles_a = {text_a[i : i + k] for i in range(len(text_a) - k + 1)}
+    shingles_b = {text_b[i : i + k] for i in range(len(text_b) - k + 1)}
+
+    intersection_count = len(shingles_a & shingles_b)
+    union_count = len(shingles_a | shingles_b)
+
+    return intersection_count / union_count if union_count > 0 else 0.0
+
+
+def get_normalised_distance(s1: str, s2: str) -> float:
+    """
+    Returns the Levenshtein distance normalized by the maximum string length
+    """
+    max_char_len = max(len(s1), len(s2))
+    
+    if max_char_len == 0:
+        return 0.0
+        
+    raw_distance = Levenshtein.distance(s1, s2)
+    return raw_distance / max_char_len
+
+
+def parse_alpha_numeric(text: str) -> Tuple[str, str]:
+    """
+    Separates a string into its non-numeric (alpha) and numeric components
+    """
+    alpha_part = "".join([char for char in text if not char.isdigit()])
+    numeric_part = "".join([char for char in text if char.isdigit()])
+    
+    return alpha_part, numeric_part
+
+
+def weighted_model_similarity(set_a: List[str], set_b: List[str], enforce_strict: bool) -> float:
+    """
+    Calculates a weighted average similarity between two sets of model words
+    """
+    accumulated_score = 0.0
+    total_weight = 0.0
+
+    for token_a in set_a:
+        alpha_a, num_a = parse_alpha_numeric(token_a)
+
+        for token_b in set_b:
+            alpha_b, num_b = parse_alpha_numeric(token_b)
+
+            process_pair = True
+            
+            if enforce_strict:
+                dist_alpha = get_normalised_distance(alpha_a, alpha_b)
+                if not (dist_alpha > 0.5 and num_a == num_b):
+                    process_pair = False
+
+            if process_pair:
+                current_weight = len(token_a) + len(token_b)
+                
+                sim_score = 1.0 - get_normalised_distance(token_a, token_b)
+
+                accumulated_score += sim_score * current_weight
+                total_weight += current_weight
+
+    return accumulated_score / total_weight if total_weight > 0 else 0.0
