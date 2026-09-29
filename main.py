@@ -1,5 +1,4 @@
 import os
-import itertools
 import matplotlib.pyplot as plt
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -109,7 +108,7 @@ def run_single_bootstrap(b, all_products, precomputed_features, all_indices, n_t
     oob_indices = sorted(list(set(all_indices) - boot_set))
     
     if len(oob_indices) < 2:
-        return (0.0, 0.0, 0.0, 0.0, b)
+        return (0.0, 0.0, 0.0, 0.0, 0, 0.0, b)
 
     current_n = len(oob_indices)
     
@@ -352,10 +351,6 @@ if __name__ == "__main__":
     print(f"Testing these (Band, Row) pairs: {valid_lsh_pairs_smooth}")
 
 
-
-    print(f"Testing these (Band, Row) pairs: {valid_lsh_pairs_smooth}")
-
-
     # Optimal hyperparameters for the full model
     settings_grid_full = {
         'NUM_BOOTSTRAPS': 5,
@@ -390,14 +385,14 @@ if __name__ == "__main__":
 
     print("\n=== RUNNING FULL MODEL ===")
     df_full = run_grid_search(file_path, settings_grid_full)
-    print("\nTop 10 Configurations for full model:")
-    print(df_full)
+    print("\nTop 10 configurations for full model:")
+    print(df_full.head(10))
     plot_performance_vs_cost(df_full, "f1_vs_comparisons_full.png")
 
     print("\n=== RUNNING RESTRICTED MODEL ===")
     df_restricted = run_grid_search(file_path, settings_grid_restricted)
-    print("\nTop 10 Configurations for restricted model:")
-    print(df_restricted)
+    print("\nTop 10 configurations for restricted model:")
+    print(df_restricted.head(10))
     plot_performance_vs_cost(df_restricted, "f1_vs_comparisons_restricted.png")
     
     print("\n=== GENERATING COMBINED PLOT ===")

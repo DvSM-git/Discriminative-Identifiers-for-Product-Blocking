@@ -13,7 +13,7 @@ from preprocessing import HybridPreprocessor
 from minhash import MinHasher
 from lsh import LSHIndex
 from msm import MSMClassifier
-from main import calculate_comprehensive_metrics, get_true_pairs_for_subset, resolve_transitivity
+from main import calculate_comprehensive_metrics, get_true_pairs_for_subset
 
 
 def run_trial_bootstrap(b, all_products, all_indices, n_total, target_sig_len, params, features):
@@ -68,13 +68,6 @@ def run_trial_bootstrap(b, all_products, all_indices, n_total, target_sig_len, p
     clusters = msm.cluster(candidates, id_to_product_map)
     
     # Metrics
-    raw_pred_pairs = set()
-    for cluster in clusters:
-        for pair in itertools.combinations(sorted(cluster), 2):
-            raw_pred_pairs.add(pair)
-            
-    refined_pred_pairs = resolve_transitivity(raw_pred_pairs)
-
     f1, _, _, _, _, _ = calculate_comprehensive_metrics(candidates, clusters, true_pairs, len(oob_indices))    
     
     return f1
